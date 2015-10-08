@@ -29,14 +29,13 @@ import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.util.Consumer;
 import com.intellij.util.net.HttpConfigurable;
 import com.intellij.util.net.NetUtils;
+import org.hotswapagent.plugin.idea.util.GitHubUtil;
+import org.hotswapagent.plugin.idea.util.UrlConnectionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.idea.maven.execution.MavenRunConfiguration;
 import org.jetbrains.idea.maven.execution.MavenRunner;
 import org.jetbrains.idea.maven.execution.MavenRunnerSettings;
-import org.kohsuke.github.GHRelease;
-import org.kohsuke.github.GHRepository;
-import org.kohsuke.github.GitHub;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -48,53 +47,14 @@ import java.util.zip.ZipFile;
 /**
  * Integration of HotSwapAgent.
  */
-public class HotSwapAgentIntegration implements StartupActivity {
-    /**
-     * Klič, který určuje aktuální verzi hotswap agenta
-     */
-    public final static String AGENT_VERSION_KEY = "cz.datalite.plugins.idea.hotswap.agent.version";
+public class HotSwapAgentIntegration implements StartupActivity, HowSwapAgentProperty {
 
-    /**
-     * Název vlastníka GITHUB repositáře
-     */
-    public final static String GITHUB_OWNER = "HotswapProjects";
-
-    /**
-     * Název projektu
-     */
-    public final static String GITHUB_PROJECT = "HotswapAgent";
-
-    /**
-     * Název repositáře
-     */
-    public final static String GITHUB_REPOSITORY = GITHUB_OWNER + "/" + GITHUB_PROJECT;
-
-    /**
-     * URL pro stažení
-     */
-    public final static String ZIP_URL_PATTERN = "https://github.com/" + GITHUB_OWNER + "/" + GITHUB_PROJECT + "/releases/download/%s/" + GITHUB_PROJECT + "-0.3.zip";
-
-
-    /**
-     * Klíč pro určení alternativního JVM
-     */
-    public final static String ALT_JVM = "-XXaltjvm";
-
-    /**
-     * Klíč pro přidání agenta
-     */
-    public final static String JAVA_AGENT = "-javaagent";
-
-    /**
-     * Aktuální popis pluginu
-     */
     private IdeaPluginDescriptor pluginDescriptor;
-
 
     @Override
     public void runActivity(final @NotNull Project project) {
         final Application application = ApplicationManager.getApplication();
-        final String newRelease = getLastRelease();
+        final String newRelease = GitHubUtil.getLastRelease();
         final String jre = getJrePath();
 
         // check os version
@@ -210,22 +170,6 @@ public class HotSwapAgentIntegration implements StartupActivity {
         notification.notify(project);
     }
 
-
-    /**
-     * @return poslední platné vydání
-     */
-    private String getLastRelease() {
-        try {
-            GitHub github = GitHub.connectAnonymously();
-            GHRepository repo = github.getRepository(GITHUB_REPOSITORY);
-
-            final List<GHRelease> releases = repo.getReleases();
-
-            return (!releases.isEmpty()) ? releases.get(0).getTagName() : null;
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
-    }
 
     /**
      * Stažení souboru z GITHUB
